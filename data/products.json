@@ -1,0 +1,66 @@
+[
+    {
+        "id": 1,
+        "name": "T-SHIRT WITH TAPE DETAILS",
+        "price": 120,
+        "category": "T-Shirts",
+        "image": "/products/tshirt-1.jpg",
+        "section": "new-arrivals"
+    },
+    {
+        "id": 2,
+        "name": "SKINNY FIT JEANS",
+        "price": 180,
+        "category": "Jeans",
+        "image": "/products/jeans-1.jpg",
+        "section": "new-arrivals"
+    },
+    {
+        "id": 3,
+        "name": "CHECKERED SHIRT",
+        "price": 150,
+        "category": "Shirts",
+        "image": "/products/shirt-1.jpg",
+        "section": "new-arrivals"
+    },
+    {
+        "id": 4,
+        "name": "SLEEVE STRIPED T-SHIRT",
+        "price": 160,
+        "category": "T-Shirts",
+        "image": "/products/tshirt-2.jpg",
+        "section": "new-arrivals"
+    },
+    {
+        "id": 5,
+        "name": "VERTICAL STRIPED SHIRT",
+        "price": 212,
+        "category": "Shirts",
+        "image": "/products/shirt-2.jpg",
+        "section": "top-selling"
+    },
+    {
+        "id": 6,
+        "name": "COURAGE GRAPHIC T-SHIRT",
+        "price": 145,
+        "category": "T-Shirts",
+        "image": "/products/tshirt-3.jpg",
+        "section": "top-selling"
+    },
+    {
+        "id": 7,
+        "name": "LOOSE FIT BERMUDA SHORTS",
+        "price": 80,
+        "category": "Shorts",
+        "image": "/products/shorts-1.jpg",
+        "section": "top-selling"
+    },
+    {
+        "id": 8,
+        "name": "FADED SKINNY JEANS",
+        "price": 210,
+        "category": "Jeans",
+        "image": "/products/jeans-2.jpg",
+        "section": "top-selling"
+    }
+]
