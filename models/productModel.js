@@ -3,11 +3,16 @@ const path = require("path");
 
 const filePath = path.join(__dirname, "../data/products.json");
 
-const getProducts = () => {
-    const data = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(data || "[]");
-};
+function getProducts() {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function getProductById(id) {
+    const products = getProducts();
+    return products.find((product) => product.id === Number(id));
+}
 
 module.exports = {
-    getProducts
+    getProducts,
+    getProductById
 };
