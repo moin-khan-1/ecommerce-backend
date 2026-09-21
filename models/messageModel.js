@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const filePath = path.join(__dirname, "../data/orders.json");
+const filePath = path.join(__dirname, "../data/messages.json");
 
 function ensureFile() {
     const directory = path.dirname(filePath);
@@ -15,18 +15,18 @@ function ensureFile() {
     }
 }
 
-const getOrders = () => {
+function getMessages() {
     ensureFile();
-    const data = fs.readFileSync(filePath, "utf-8");
+    const data = fs.readFileSync(filePath, "utf8");
     return JSON.parse(data || "[]");
-};
+}
 
-const saveOrders = (orders) => {
+function saveMessages(messages) {
     ensureFile();
-    fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
-};
+    fs.writeFileSync(filePath, JSON.stringify(messages, null, 2));
+}
 
 module.exports = {
-    getOrders,
-    saveOrders
+    getMessages,
+    saveMessages,
 };

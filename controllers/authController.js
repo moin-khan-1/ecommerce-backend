@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const { getUsers, saveUsers } = require("../models/userModel");
+const { sendAdminEmail } = require("../utils/email");
 
 const signup = async (req, res) => {
     try {
@@ -14,7 +15,7 @@ const signup = async (req, res) => {
         const users = getUsers();
 
         const existingUser = users.find(
-            (user) => user.email === email
+            (user) => user.email.toLowerCase() === email.toLowerCase()
         );
 
         if (existingUser) {
@@ -27,13 +28,22 @@ const signup = async (req, res) => {
 
         const newUser = {
             id: Date.now(),
-            name,
-            email,
+            name: String(name).trim(),
+            email: String(email).trim(),
             password: hashedPassword
         };
 
         users.push(newUser);
         saveUsers(users);
+
+        await sendAdminEmail(
+            `New SHOP.CO signup: ${newUser.email}`,
+            `
+                <h2>New customer signup</h2>
+                <p><strong>Name:</strong> ${newUser.name}</p>
+                <p><strong>Email:</strong> ${newUser.email}</p>
+            `
+        );
 
         res.status(201).json({
             message: "Signup successful",
@@ -44,6 +54,7 @@ const signup = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({
             message: "Server error"
         });
@@ -57,7 +68,7 @@ const login = async (req, res) => {
         const users = getUsers();
 
         const user = users.find(
-            (item) => item.email === email
+            (item) => item.email.toLowerCase() === email.toLowerCase()
         );
 
         if (!user) {
@@ -77,6 +88,16 @@ const login = async (req, res) => {
             });
         }
 
+        await sendAdminEmail(
+            `SHOP.CO login: ${user.email}`,
+            `
+                <h2>Customer login</h2>
+                <p><strong>Name:</strong> ${user.name}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+            `
+        );
+
         res.json({
             message: "Login successful",
             user: {
@@ -86,6 +107,7 @@ const login = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({
             message: "Server error"
         });
