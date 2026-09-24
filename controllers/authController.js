@@ -8,19 +8,20 @@ const signup = async (req, res) => {
 
         if (!name || !email || !password) {
             return res.status(400).json({
-                message: "All fields are required"
+                message: "All fields are required",
             });
         }
 
-        const users = getUsers();
+        const users = await getUsers();
 
         const existingUser = users.find(
-            (user) => user.email.toLowerCase() === email.toLowerCase()
+            (user) =>
+                user.email.toLowerCase() === email.trim().toLowerCase()
         );
 
         if (existingUser) {
             return res.status(400).json({
-                message: "Email already exists"
+                message: "Email already exists",
             });
         }
 
@@ -30,18 +31,27 @@ const signup = async (req, res) => {
             id: Date.now(),
             name: String(name).trim(),
             email: String(email).trim(),
-            password: hashedPassword
+            password: hashedPassword,
         };
 
         users.push(newUser);
-        saveUsers(users);
+
+        await saveUsers(users);
 
         await sendAdminEmail(
             `New SHOP.CO signup: ${newUser.email}`,
             `
                 <h2>New customer signup</h2>
-                <p><strong>Name:</strong> ${newUser.name}</p>
-                <p><strong>Email:</strong> ${newUser.email}</p>
+
+                <p>
+                    <strong>Name:</strong>
+                    ${newUser.name}
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    ${newUser.email}
+                </p>
             `
         );
 
@@ -50,13 +60,14 @@ const signup = async (req, res) => {
             user: {
                 id: newUser.id,
                 name: newUser.name,
-                email: newUser.email
-            }
+                email: newUser.email,
+            },
         });
     } catch (error) {
-        console.error(error);
+        console.error("Signup error:", error);
+
         res.status(500).json({
-            message: "Server error"
+            message: "Server error",
         });
     }
 };
@@ -65,15 +76,22 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const users = getUsers();
+        if (!email || !password) {
+            return res.status(400).json({
+                message: "Email and password are required",
+            });
+        }
+
+        const users = await getUsers();
 
         const user = users.find(
-            (item) => item.email.toLowerCase() === email.toLowerCase()
+            (item) =>
+                item.email.toLowerCase() === email.trim().toLowerCase()
         );
 
         if (!user) {
             return res.status(401).json({
-                message: "Invalid email or password"
+                message: "Invalid email or password",
             });
         }
 
@@ -84,7 +102,7 @@ const login = async (req, res) => {
 
         if (!passwordMatch) {
             return res.status(401).json({
-                message: "Invalid email or password"
+                message: "Invalid email or password",
             });
         }
 
@@ -92,9 +110,21 @@ const login = async (req, res) => {
             `SHOP.CO login: ${user.email}`,
             `
                 <h2>Customer login</h2>
-                <p><strong>Name:</strong> ${user.name}</p>
-                <p><strong>Email:</strong> ${user.email}</p>
-                <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+
+                <p>
+                    <strong>Name:</strong>
+                    ${user.name}
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    ${user.email}
+                </p>
+
+                <p>
+                    <strong>Time:</strong>
+                    ${new Date().toLocaleString()}
+                </p>
             `
         );
 
@@ -103,18 +133,19 @@ const login = async (req, res) => {
             user: {
                 id: user.id,
                 name: user.name,
-                email: user.email
-            }
+                email: user.email,
+            },
         });
     } catch (error) {
-        console.error(error);
+        console.error("Login error:", error);
+
         res.status(500).json({
-            message: "Server error"
+            message: "Server error",
         });
     }
 };
 
 module.exports = {
     signup,
-    login
+    login,
 };

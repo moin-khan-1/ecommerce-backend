@@ -12,20 +12,28 @@ function saveProducts(products) {
 }
 
 async function dashboard(req, res) {
-    const products = getProducts();
-    const orders = await getOrders();
-    const users = getUsers();
-    const messages = getMessages();
+    try {
+        const products = getProducts();
+        const orders = await getOrders();
+        const users = await getUsers();
+        const messages = getMessages();
 
-    res.json({
-        totalProducts: products.length,
-        totalOrders: orders.length,
-        totalUsers: users.length,
-        totalMessages: messages.filter(
-            (item) => item.status === "New"
-        ).length,
-        recentOrders: [...orders].reverse().slice(0, 5),
-    });
+        res.json({
+            totalProducts: products.length,
+            totalOrders: orders.length,
+            totalUsers: users.length,
+            totalMessages: messages.filter(
+                (item) => item.status === "New"
+            ).length,
+            recentOrders: [...orders].reverse().slice(0, 5),
+        });
+    } catch (error) {
+        console.error("Dashboard error:", error);
+
+        res.status(500).json({
+            message: "Failed to load dashboard",
+        });
+    }
 }
 
 function getAdminProducts(req, res) {
@@ -114,9 +122,11 @@ function deleteProduct(req, res) {
 async function getAdminOrders(req, res) {
     try {
         const orders = await getOrders();
+
         res.json([...orders].reverse());
     } catch (error) {
         console.error("Admin orders error:", error);
+
         res.status(500).json({
             message: "Failed to load orders",
         });
@@ -127,6 +137,7 @@ async function updateOrder(req, res) {
     try {
         const orders = await getOrders();
         const id = Number(req.params.id);
+
         const order = orders.find((item) => item.id === id);
 
         if (!order) {
@@ -160,15 +171,27 @@ async function updateOrder(req, res) {
         });
     } catch (error) {
         console.error("Update order error:", error);
+
         res.status(500).json({
             message: "Failed to update order",
         });
     }
 }
 
-function getAdminUsers(req, res) {
-    const users = getUsers().map(({ password, ...safeUser }) => safeUser);
-    res.json(users);
+async function getAdminUsers(req, res) {
+    try {
+        const users = await getUsers();
+
+        const safeUsers = users.map(({ password, ...safeUser }) => safeUser);
+
+        res.json(safeUsers);
+    } catch (error) {
+        console.error("Admin users error:", error);
+
+        res.status(500).json({
+            message: "Failed to load users",
+        });
+    }
 }
 
 function getAdminMessages(req, res) {
@@ -178,6 +201,7 @@ function getAdminMessages(req, res) {
 function updateMessage(req, res) {
     const messages = getMessages();
     const id = Number(req.params.id);
+
     const message = messages.find((item) => item.id === id);
 
     if (!message) {
@@ -195,6 +219,7 @@ function updateMessage(req, res) {
     }
 
     message.status = req.body.status;
+
     saveMessages(messages);
 
     res.json({
