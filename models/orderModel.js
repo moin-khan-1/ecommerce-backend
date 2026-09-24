@@ -6,22 +6,16 @@ const getOrders = async () => {
     try {
         const result = await get(BLOB_PATH, {
             access: "private",
+            useCache: false,
         });
 
-        if (!result) {
+        if (!result || result.statusCode !== 200) {
             return [];
         }
 
         const text = await new Response(result.stream).text();
         return JSON.parse(text || "[]");
     } catch (error) {
-        if (
-            error?.name === "BlobNotFoundError" ||
-            error?.message?.includes("not found")
-        ) {
-            return [];
-        }
-
         console.error("Error reading orders:", error);
         return [];
     }
