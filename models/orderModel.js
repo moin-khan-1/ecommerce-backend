@@ -9,31 +9,37 @@ const getOrders = async () => {
             useCache: false,
         });
 
-        if (!result || result.statusCode !== 200) {
+        if (!result || !result.stream) {
             return [];
         }
 
         const text = await new Response(result.stream).text();
+
         return JSON.parse(text || "[]");
     } catch (error) {
-        console.error("Error reading orders:", error);
+        console.error("Error reading orders from Blob:", error);
         return [];
     }
 };
 
 const saveOrders = async (orders) => {
-    await put(
-        BLOB_PATH,
-        JSON.stringify(orders, null, 2),
-        {
-            access: "private",
-            contentType: "application/json",
-            addRandomSuffix: false,
-            allowOverwrite: true,
-        }
-    );
+    try {
+        await put(
+            BLOB_PATH,
+            JSON.stringify(orders, null, 2),
+            {
+                access: "private",
+                contentType: "application/json",
+                addRandomSuffix: false,
+                allowOverwrite: true,
+            }
+        );
 
-    return true;
+        return true;
+    } catch (error) {
+        console.error("Error saving orders to Blob:", error);
+        throw error;
+    }
 };
 
 module.exports = {
