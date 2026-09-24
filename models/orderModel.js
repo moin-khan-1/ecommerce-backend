@@ -17,13 +17,26 @@ function ensureFile() {
 
 const getOrders = () => {
     ensureFile();
-    const data = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(data || "[]");
+
+    try {
+        const data = fs.readFileSync(filePath, "utf-8");
+        return JSON.parse(data || "[]");
+    } catch (error) {
+        console.error("Error reading orders:", error);
+        return [];
+    }
 };
 
 const saveOrders = (orders) => {
-    ensureFile();
-    fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
+    try {
+        ensureFile();
+        fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
+        return true;
+    } catch (error) {
+        // Vercel filesystem is read-only
+        console.log("Order file save skipped:", error.code);
+        return false;
+    }
 };
 
 module.exports = {
