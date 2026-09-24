@@ -11,9 +11,9 @@ function saveProducts(products) {
     fs.writeFileSync(productsFile, JSON.stringify(products, null, 4));
 }
 
-function dashboard(req, res) {
+async function dashboard(req, res) {
     const products = getProducts();
-    const orders = getOrders();
+    const orders = await getOrders();
     const users = getUsers();
     const messages = getMessages();
 
@@ -21,7 +21,9 @@ function dashboard(req, res) {
         totalProducts: products.length,
         totalOrders: orders.length,
         totalUsers: users.length,
-        totalMessages: messages.filter((item) => item.status === "New").length,
+        totalMessages: messages.filter(
+            (item) => item.status === "New"
+        ).length,
         recentOrders: [...orders].reverse().slice(0, 5),
     });
 }
@@ -109,44 +111,59 @@ function deleteProduct(req, res) {
     });
 }
 
-function getAdminOrders(req, res) {
-    res.json([...getOrders()].reverse());
+async function getAdminOrders(req, res) {
+    try {
+        const orders = await getOrders();
+        res.json([...orders].reverse());
+    } catch (error) {
+        console.error("Admin orders error:", error);
+        res.status(500).json({
+            message: "Failed to load orders",
+        });
+    }
 }
 
-function updateOrder(req, res) {
-    const orders = getOrders();
-    const id = Number(req.params.id);
-    const order = orders.find((item) => item.id === id);
+async function updateOrder(req, res) {
+    try {
+        const orders = await getOrders();
+        const id = Number(req.params.id);
+        const order = orders.find((item) => item.id === id);
 
-    if (!order) {
-        return res.status(404).json({
-            message: "Order not found",
+        if (!order) {
+            return res.status(404).json({
+                message: "Order not found",
+            });
+        }
+
+        const allowedStatuses = [
+            "Pending",
+            "Processing",
+            "Shipped",
+            "Delivered",
+            "Cancelled",
+        ];
+
+        if (!allowedStatuses.includes(req.body.status)) {
+            return res.status(400).json({
+                message: "Invalid order status",
+            });
+        }
+
+        order.status = req.body.status;
+        order.updatedAt = new Date().toISOString();
+
+        await saveOrders(orders);
+
+        res.json({
+            message: "Order status updated",
+            order,
+        });
+    } catch (error) {
+        console.error("Update order error:", error);
+        res.status(500).json({
+            message: "Failed to update order",
         });
     }
-
-    const allowedStatuses = [
-        "Pending",
-        "Processing",
-        "Shipped",
-        "Delivered",
-        "Cancelled",
-    ];
-
-    if (!allowedStatuses.includes(req.body.status)) {
-        return res.status(400).json({
-            message: "Invalid order status",
-        });
-    }
-
-    order.status = req.body.status;
-    order.updatedAt = new Date().toISOString();
-
-    saveOrders(orders);
-
-    res.json({
-        message: "Order status updated",
-        order,
-    });
 }
 
 function getAdminUsers(req, res) {

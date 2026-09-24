@@ -11,7 +11,7 @@ const createOrder = async (req, res) => {
             });
         }
 
-        const orders = getOrders();
+        const orders = await getOrders();
 
         const newOrder = {
             id: Date.now(),
@@ -23,7 +23,7 @@ const createOrder = async (req, res) => {
         };
 
         orders.push(newOrder);
-        saveOrders(orders);
+        await saveOrders(orders);
 
         const itemRows = items.map((item) => `
             <tr>

@@ -1,41 +1,48 @@
-const fs = require("fs");
-const path = require("path");
+const { put, get } = require("@vercel/blob");
 
-const filePath = path.join(__dirname, "../data/orders.json");
+const BLOB_PATH = "orders/orders.json";
 
-const getOrders = () => {
-    if (process.env.VERCEL) {
-        return [];
-    }
-
-    if (!fs.existsSync(filePath)) {
-        return [];
-    }
-
+const getOrders = async () => {
     try {
-        const data = fs.readFileSync(filePath, "utf-8");
-        return JSON.parse(data || "[]");
+        const result = await get(BLOB_PATH, {
+            access: "private",
+        });
+
+        if (!result) {
+            return [];
+        }
+
+        const text = await new Response(result.stream).text();
+        return JSON.parse(text || "[]");
     } catch (error) {
+        if (
+            error?.name === "BlobNotFoundError" ||
+            error?.message?.includes("not found")
+        ) {
+            return [];
+        }
+
         console.error("Error reading orders:", error);
         return [];
     }
 };
 
-const saveOrders = (orders) => {
-    if (process.env.VERCEL) {
-        return true;
-    }
+const saveOrders = async (orders) => {
+    await put(
+        BLOB_PATH,
+        JSON.stringify(orders, null, 2),
+        {
+            access: "private",
+            contentType: "application/json",
+            addRandomSuffix: false,
+            allowOverwrite: true,
+        }
+    );
 
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
-        return true;
-    } catch (error) {
-        console.error("Error saving orders:", error);
-        return false;
-    }
+    return true;
 };
 
 module.exports = {
     getOrders,
-    saveOrders
+    saveOrders,
 };
