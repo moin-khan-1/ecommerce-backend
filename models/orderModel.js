@@ -3,20 +3,14 @@ const path = require("path");
 
 const filePath = path.join(__dirname, "../data/orders.json");
 
-function ensureFile() {
-    const directory = path.dirname(filePath);
-
-    if (!fs.existsSync(directory)) {
-        fs.mkdirSync(directory, { recursive: true });
+const getOrders = () => {
+    if (process.env.VERCEL) {
+        return [];
     }
 
     if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, "[]");
+        return [];
     }
-}
-
-const getOrders = () => {
-    ensureFile();
 
     try {
         const data = fs.readFileSync(filePath, "utf-8");
@@ -28,13 +22,15 @@ const getOrders = () => {
 };
 
 const saveOrders = (orders) => {
+    if (process.env.VERCEL) {
+        return true;
+    }
+
     try {
-        ensureFile();
         fs.writeFileSync(filePath, JSON.stringify(orders, null, 2));
         return true;
     } catch (error) {
-        // Vercel filesystem is read-only
-        console.log("Order file save skipped:", error.code);
+        console.error("Error saving orders:", error);
         return false;
     }
 };
