@@ -56,7 +56,6 @@ const createOrder = async (req, res) => {
                             <th>Total</th>
                         </tr>
                     </thead>
-
                     <tbody>
                         ${itemRows}
                     </tbody>
@@ -93,7 +92,99 @@ const getAllOrders = async (req, res) => {
     }
 };
 
+// Customer's own orders
+const getMyOrders = async (req, res) => {
+    try {
+        const email = String(req.query.email || "")
+            .trim()
+            .toLowerCase();
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Customer email is required",
+            });
+        }
+
+        const orders = await getOrders();
+
+        const myOrders = orders
+            .filter(
+                (order) =>
+                    String(order.customer?.email || "")
+                        .trim()
+                        .toLowerCase() === email
+            )
+            .reverse();
+
+        res.json(myOrders);
+    } catch (error) {
+        console.error("Get my orders error:", error);
+
+        res.status(500).json({
+            message: "Failed to load your orders",
+        });
+    }
+};
+
+// Customer can cancel/delete only Pending orders
+const deleteMyOrder = async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        const email = String(req.query.email || "")
+            .trim()
+            .toLowerCase();
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Customer email is required",
+            });
+        }
+
+        const orders = await getOrders();
+
+        const orderIndex = orders.findIndex(
+            (order) =>
+                Number(order.id) === id &&
+                String(order.customer?.email || "")
+                    .trim()
+                    .toLowerCase() === email
+        );
+
+        if (orderIndex === -1) {
+            return res.status(404).json({
+                message: "Order not found",
+            });
+        }
+
+        const order = orders[orderIndex];
+
+        if (order.status !== "Pending") {
+            return res.status(400).json({
+                message:
+                    "Only Pending orders can be cancelled.",
+            });
+        }
+
+        orders.splice(orderIndex, 1);
+
+        await saveOrders(orders);
+
+        res.json({
+            message: "Order cancelled successfully",
+        });
+    } catch (error) {
+        console.error("Delete order error:", error);
+
+        res.status(500).json({
+            message: "Failed to cancel order",
+        });
+    }
+};
+
 module.exports = {
     createOrder,
     getAllOrders,
+    getMyOrders,
+    deleteMyOrder,
 };
