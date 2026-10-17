@@ -1,28 +1,46 @@
-const { getProducts } = require("../models/productModel");
 
-const getAllProducts = (req, res) => {
-    const products = getProducts();
+const {
+    getProducts,
+    getProductById,
+} = require("../models/productModel");
 
-    res.json(products);
-};
+// Get all products
+const getAllProducts = async (req, res) => {
+    try {
+        const products = await getProducts();
 
-const getProductById = (req, res) => {
-    const products = getProducts();
+        return res.json(products);
+    } catch (error) {
+        console.error("Get all products error:", error);
 
-    const product = products.find(
-        (item) => item.id === Number(req.params.id)
-    );
-
-    if (!product) {
-        return res.status(404).json({
-            message: "Product not found"
+        return res.status(500).json({
+            message: "Failed to load products",
         });
     }
+};
 
-    res.json(product);
+// Get single product by ID
+const getProductByIdController = async (req, res) => {
+    try {
+        const product = await getProductById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({
+                message: "Product not found",
+            });
+        }
+
+        return res.json(product);
+    } catch (error) {
+        console.error("Get product by ID error:", error);
+
+        return res.status(500).json({
+            message: "Failed to load product",
+        });
+    }
 };
 
 module.exports = {
     getAllProducts,
-    getProductById
+    getProductById: getProductByIdController,
 };
