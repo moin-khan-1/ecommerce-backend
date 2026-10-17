@@ -1,19 +1,25 @@
-const { getProducts } = require("../models/productModel");
-const fs = require("fs");
-const path = require("path");
-const { getOrders, saveOrders } = require("../models/orderModel");
+
+const {
+    getProducts,
+    saveProducts,
+} = require("../models/productModel");
+
+const {
+    getOrders,
+    saveOrders,
+} = require("../models/orderModel");
+
 const { getUsers } = require("../models/userModel");
-const { getMessages, saveMessages } = require("../models/messageModel");
 
-const productsFile = path.join(__dirname, "../data/products.json");
+const {
+    getMessages,
+    saveMessages,
+} = require("../models/messageModel");
 
-function saveProducts(products) {
-    fs.writeFileSync(productsFile, JSON.stringify(products, null, 4));
-}
-
+// Admin Dashboard
 async function dashboard(req, res) {
     try {
-        const products = getProducts();
+        const products = await getProducts();
         const orders = await getOrders();
         const users = await getUsers();
         const messages = getMessages();
@@ -36,89 +42,188 @@ async function dashboard(req, res) {
     }
 }
 
-function getAdminProducts(req, res) {
-    res.json(getProducts());
-}
+// Get all products for admin
+async function getAdminProducts(req, res) {
+    try {
+        const products = await getProducts();
+        res.json(products);
+    } catch (error) {
+        console.error("Get admin products error:", error);
 
-function createProduct(req, res) {
-    const { name, price, category, image, section } = req.body;
-
-    if (!name || price === undefined || !category || !image || !section) {
-        return res.status(400).json({
-            message: "All product fields are required",
+        res.status(500).json({
+            message: "Failed to load products",
         });
     }
-
-    const products = getProducts();
-
-    const newProduct = {
-        id: products.length
-            ? Math.max(...products.map((item) => Number(item.id))) + 1
-            : 1,
-        name: String(name).trim(),
-        price: Number(price),
-        category,
-        image,
-        section,
-    };
-
-    products.push(newProduct);
-    saveProducts(products);
-
-    res.status(201).json({
-        message: "Product created successfully",
-        product: newProduct,
-    });
 }
 
-function updateProduct(req, res) {
-    const products = getProducts();
-    const id = Number(req.params.id);
-    const index = products.findIndex((item) => item.id === id);
+// Create product
+async function createProduct(req, res) {
+    try {
+        const {
+            name,
+            price,
+            category,
+            image,
+            section,
+        } = req.body;
 
-    if (index === -1) {
-        return res.status(404).json({
-            message: "Product not found",
+        if (
+            !name ||
+            price === undefined ||
+            price === null ||
+            price === "" ||
+            !category ||
+            !image ||
+            !section
+        ) {
+            return res.status(400).json({
+                message: "All product fields are required",
+            });
+        }
+
+        const numericPrice = Number(price);
+
+        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+            return res.status(400).json({
+                message: "Price must be a valid non-negative number",
+            });
+        }
+
+        const products = await getProducts();
+
+        const numericIds = products
+            .map((item) => Number(item.id))
+            .filter(Number.isFinite);
+
+        const newProduct = {
+            id: numericIds.length
+                ? Math.max(...numericIds) + 1
+                : 1,
+            name: String(name).trim(),
+            price: numericPrice,
+            category: String(category).trim(),
+            image: String(image).trim(),
+            section: String(section).trim(),
+        };
+
+        products.push(newProduct);
+
+        await saveProducts(products);
+
+        return res.status(201).json({
+            message: "Product created successfully",
+            product: newProduct,
+        });
+    } catch (error) {
+        console.error("Create product error:", error);
+
+        return res.status(500).json({
+            message: "Failed to create product",
         });
     }
-
-    const { name, price, category, image, section } = req.body;
-
-    products[index] = {
-        ...products[index],
-        name: String(name || products[index].name).trim(),
-        price: Number(price ?? products[index].price),
-        category: category || products[index].category,
-        image: image || products[index].image,
-        section: section || products[index].section,
-    };
-
-    saveProducts(products);
-
-    res.json({
-        message: "Product updated successfully",
-        product: products[index],
-    });
 }
 
-function deleteProduct(req, res) {
-    const products = getProducts();
-    const id = Number(req.params.id);
-    const filtered = products.filter((item) => item.id !== id);
+// Update product
+async function updateProduct(req, res) {
+    try {
+        const products = await getProducts();
+        const id = Number(req.params.id);
 
-    if (filtered.length === products.length) {
-        return res.status(404).json({
-            message: "Product not found",
+        const index = products.findIndex(
+            (item) => Number(item.id) === id
+        );
+
+        if (index === -1) {
+            return res.status(404).json({
+                message: "Product not found",
+            });
+        }
+
+        const {
+            name,
+            price,
+            category,
+            image,
+            section,
+        } = req.body;
+
+        const updatedPrice =
+            price === undefined || price === ""
+                ? products[index].price
+                : Number(price);
+
+        if (
+            !Number.isFinite(Number(updatedPrice)) ||
+            Number(updatedPrice) < 0
+        ) {
+            return res.status(400).json({
+                message: "Price must be a valid non-negative number",
+            });
+        }
+
+        products[index] = {
+            ...products[index],
+            name: name
+                ? String(name).trim()
+                : products[index].name,
+            price: Number(updatedPrice),
+            category: category
+                ? String(category).trim()
+                : products[index].category,
+            image: image
+                ? String(image).trim()
+                : products[index].image,
+            section: section
+                ? String(section).trim()
+                : products[index].section,
+        };
+
+        await saveProducts(products);
+
+        return res.json({
+            message: "Product updated successfully",
+            product: products[index],
+        });
+    } catch (error) {
+        console.error("Update product error:", error);
+
+        return res.status(500).json({
+            message: "Failed to update product",
         });
     }
-
-    saveProducts(filtered);
-
-    res.json({
-        message: "Product deleted successfully",
-    });
 }
 
+// Delete product
+async function deleteProduct(req, res) {
+    try {
+        const products = await getProducts();
+        const id = Number(req.params.id);
+
+        const filtered = products.filter(
+            (item) => Number(item.id) !== id
+        );
+
+        if (filtered.length === products.length) {
+            return res.status(404).json({
+                message: "Product not found",
+            });
+        }
+
+        await saveProducts(filtered);
+
+        return res.json({
+            message: "Product deleted successfully",
+        });
+    } catch (error) {
+        console.error("Delete product error:", error);
+
+        return res.status(500).json({
+            message: "Failed to delete product",
+        });
+    }
+}
+
+// Get all orders for admin
 async function getAdminOrders(req, res) {
     try {
         const orders = await getOrders();
@@ -133,12 +238,15 @@ async function getAdminOrders(req, res) {
     }
 }
 
+// Update order status
 async function updateOrder(req, res) {
     try {
         const orders = await getOrders();
         const id = Number(req.params.id);
 
-        const order = orders.find((item) => item.id === id);
+        const order = orders.find(
+            (item) => Number(item.id) === id
+        );
 
         if (!order) {
             return res.status(404).json({
@@ -165,7 +273,7 @@ async function updateOrder(req, res) {
 
         await saveOrders(orders);
 
-        res.json({
+        return res.json({
             message: "Order status updated",
             order,
         });
@@ -178,11 +286,14 @@ async function updateOrder(req, res) {
     }
 }
 
+// Get users without passwords
 async function getAdminUsers(req, res) {
     try {
         const users = await getUsers();
 
-        const safeUsers = users.map(({ password, ...safeUser }) => safeUser);
+        const safeUsers = users.map(
+            ({ password, ...safeUser }) => safeUser
+        );
 
         res.json(safeUsers);
     } catch (error) {
@@ -194,38 +305,57 @@ async function getAdminUsers(req, res) {
     }
 }
 
+// Get messages
 function getAdminMessages(req, res) {
-    res.json([...getMessages()].reverse());
+    try {
+        res.json([...getMessages()].reverse());
+    } catch (error) {
+        console.error("Admin messages error:", error);
+
+        res.status(500).json({
+            message: "Failed to load messages",
+        });
+    }
 }
 
+// Update message status
 function updateMessage(req, res) {
-    const messages = getMessages();
-    const id = Number(req.params.id);
+    try {
+        const messages = getMessages();
+        const id = Number(req.params.id);
 
-    const message = messages.find((item) => item.id === id);
+        const message = messages.find(
+            (item) => Number(item.id) === id
+        );
 
-    if (!message) {
-        return res.status(404).json({
-            message: "Message not found",
+        if (!message) {
+            return res.status(404).json({
+                message: "Message not found",
+            });
+        }
+
+        const allowedStatuses = ["New", "Read", "Replied"];
+
+        if (!allowedStatuses.includes(req.body.status)) {
+            return res.status(400).json({
+                message: "Invalid message status",
+            });
+        }
+
+        message.status = req.body.status;
+        saveMessages(messages);
+
+        return res.json({
+            message: "Message status updated",
+            item: message,
+        });
+    } catch (error) {
+        console.error("Update message error:", error);
+
+        res.status(500).json({
+            message: "Failed to update message",
         });
     }
-
-    const allowedStatuses = ["New", "Read", "Replied"];
-
-    if (!allowedStatuses.includes(req.body.status)) {
-        return res.status(400).json({
-            message: "Invalid message status",
-        });
-    }
-
-    message.status = req.body.status;
-
-    saveMessages(messages);
-
-    res.json({
-        message: "Message status updated",
-        item: message,
-    });
 }
 
 module.exports = {
