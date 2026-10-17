@@ -1,10 +1,23 @@
+
 const bcrypt = require("bcrypt");
-const { getUsers, saveUsers } = require("../models/userModel");
-const { sendAdminEmail } = require("../utils/email");
+
+const {
+    getUsers,
+    saveUsers,
+} = require("../models/userModel");
+
+const {
+    sendAdminEmail,
+    sendEmail,
+} = require("../utils/email");
 
 const signup = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const {
+            name,
+            email,
+            password,
+        } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({
@@ -14,9 +27,15 @@ const signup = async (req, res) => {
 
         const users = await getUsers();
 
+        const cleanEmail = String(email)
+            .trim()
+            .toLowerCase();
+
         const existingUser = users.find(
             (user) =>
-                user.email.toLowerCase() === email.trim().toLowerCase()
+                String(user.email)
+                    .trim()
+                    .toLowerCase() === cleanEmail
         );
 
         if (existingUser) {
@@ -25,12 +44,15 @@ const signup = async (req, res) => {
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(
+            password,
+            10
+        );
 
         const newUser = {
             id: Date.now(),
             name: String(name).trim(),
-            email: String(email).trim(),
+            email: cleanEmail,
             password: hashedPassword,
         };
 
@@ -38,24 +60,44 @@ const signup = async (req, res) => {
 
         await saveUsers(users);
 
-        await sendAdminEmail(
-            `New SHOP.CO signup: ${newUser.email}`,
-            `
-                <h2>New customer signup</h2>
+        // Notify admin about the new signup
+        try {
+            await sendAdminEmail(
+                `New SHOPPING.CO signup: ${newUser.email}`,
+                `
+                    <h2>New Customer Signup</h2>
+                    <p><strong>Name:</strong> ${newUser.name}</p>
+                    <p><strong>Email:</strong> ${newUser.email}</p>
+                    <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                `
+            );
+        } catch (emailError) {
+            console.error(
+                "Signup admin email failed:",
+                emailError.message
+            );
+        }
 
-                <p>
-                    <strong>Name:</strong>
-                    ${newUser.name}
-                </p>
+        // Send welcome email to the customer
+        try {
+            await sendEmail(
+                newUser.email,
+                "Welcome to SHOPPING.CO!",
+                `
+                    <h2>Welcome to SHOPPING.CO, ${newUser.name}!</h2>
+                    <p>Your account has been created successfully.</p>
+                    <p>You can now log in and start shopping with us.</p>
+                    <p>Thank you for joining SHOPPING.CO!</p>
+                `
+            );
+        } catch (emailError) {
+            console.error(
+                "Signup customer email failed:",
+                emailError.message
+            );
+        }
 
-                <p>
-                    <strong>Email:</strong>
-                    ${newUser.email}
-                </p>
-            `
-        );
-
-        res.status(201).json({
+        return res.status(201).json({
             message: "Signup successful",
             user: {
                 id: newUser.id,
@@ -66,7 +108,7 @@ const signup = async (req, res) => {
     } catch (error) {
         console.error("Signup error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Server error",
         });
     }
@@ -74,7 +116,10 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const {
+            email,
+            password,
+        } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({
@@ -84,9 +129,15 @@ const login = async (req, res) => {
 
         const users = await getUsers();
 
+        const cleanEmail = String(email)
+            .trim()
+            .toLowerCase();
+
         const user = users.find(
             (item) =>
-                item.email.toLowerCase() === email.trim().toLowerCase()
+                String(item.email)
+                    .trim()
+                    .toLowerCase() === cleanEmail
         );
 
         if (!user) {
@@ -106,29 +157,44 @@ const login = async (req, res) => {
             });
         }
 
-        await sendAdminEmail(
-            `SHOP.CO login: ${user.email}`,
-            `
-                <h2>Customer login</h2>
+        // Notify admin about the successful login
+        try {
+            await sendAdminEmail(
+                `SHOPPING.CO login: ${user.email}`,
+                `
+                    <h2>Customer Login</h2>
+                    <p><strong>Name:</strong> ${user.name}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                `
+            );
+        } catch (emailError) {
+            console.error(
+                "Login admin email failed:",
+                emailError.message
+            );
+        }
 
-                <p>
-                    <strong>Name:</strong>
-                    ${user.name}
-                </p>
+        // Notify customer about the successful login
+        try {
+            await sendEmail(
+                user.email,
+                "New login to your SHOPPING.CO account",
+                `
+                    <h2>Hello ${user.name},</h2>
+                    <p>You have successfully logged in to your SHOPPING.CO account.</p>
+                    <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                    <p>If this login was not made by you, please contact our support team.</p>
+                `
+            );
+        } catch (emailError) {
+            console.error(
+                "Login customer email failed:",
+                emailError.message
+            );
+        }
 
-                <p>
-                    <strong>Email:</strong>
-                    ${user.email}
-                </p>
-
-                <p>
-                    <strong>Time:</strong>
-                    ${new Date().toLocaleString()}
-                </p>
-            `
-        );
-
-        res.json({
+        return res.json({
             message: "Login successful",
             user: {
                 id: user.id,
@@ -139,7 +205,7 @@ const login = async (req, res) => {
     } catch (error) {
         console.error("Login error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Server error",
         });
     }
